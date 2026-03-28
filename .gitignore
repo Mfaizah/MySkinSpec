@@ -1,0 +1,15 @@
+# Ignore the virtual environment
+venv/
+.venv/
+env/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore the local database
+db.sqlite3
+
+# Ignore your secret API keys
+.env
