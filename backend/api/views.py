@@ -85,7 +85,7 @@ class GeminiChatView(APIView):
         """
 
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash", 
             system_instruction=system_instruction
         )
 
@@ -110,3 +110,59 @@ class GeminiChatView(APIView):
             # This prints the exact error in your Django terminal so we can see why it fails!
             print("GEMINI ERROR:", str(e)) 
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class IngredientAnalyserView(APIView):
+    permission_classes = [AllowAny] 
+
+    def post(self, request):
+        # We still look for 'ingredients' in the request to not break the frontend,
+        # but we treat it as a general 'user_query' now.
+        user_query = request.data.get('ingredients', '')
+        profile = request.data.get('profile', {}) 
+
+        if not user_query:
+            return Response({"error": "No input provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Build a text summary of the user's profile if it exists
+        profile_text = "Unknown/General User"
+        if profile:
+            profile_text = f"Skin Type: {profile.get('skinType', 'Unknown')}, Sensitivity: {profile.get('sensitivity', 'Unknown')}, Concerns: {', '.join(profile.get('concerns', []))}"
+
+        system_instruction = f"""
+        You are a master dermatologist AI. The user will provide either a specific skincare product name, a single ingredient, or a full ingredient list.
+        Your job is to analyze it based on the user's skin profile:
+        USER PROFILE: {profile_text}
+        
+        Step 1: Identify what the user inputted (Product, Single Ingredient, or Ingredient List). If it's a commercial product name, use your internal knowledge to determine its key active and inactive ingredients.
+        Step 2: Analyze how those specific ingredients interact with the user's specific skin profile.
+        
+        You MUST return your response as a valid JSON object using exactly this structure. 
+        Do not add any extra text outside the JSON.
+        {{
+          "identified_input": "State what you analyzed (e.g., 'Product: CeraVe Cleanser' or 'Ingredient: Niacinamide')",
+          "benefits": ["Benefit 1 based on profile", "Benefit 2"],
+          "risks": ["Risk 1 based on profile", "Risk 2"],
+          "verdict": "A 2-sentence summary of whether this is safe for their specific skin type.",
+          "cheaper_alts": [{{"name": "Affordable Product Name", "reason": "Why it's a good cheaper alternative"}}],
+          "eco_alts": [{{"name": "Eco-Friendly Product Name", "reason": "Why it's a good sustainable alternative"}}]
+        }}
+        """
+
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash", 
+            system_instruction=system_instruction,
+            generation_config={"response_mime_type": "application/json"}
+        )       
+
+        try:
+            chat = model.start_chat()
+            response = chat.send_message(f"Analyze this input: {user_query}")
+            
+            import json
+            analysis_data = json.loads(response.text)
+            
+            return Response(analysis_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("GEMINI ANALYSER ERROR:", str(e))
+            return Response({"error": "Failed to analyze input."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
