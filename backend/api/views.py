@@ -1,4 +1,6 @@
 import os
+import json
+import requests as python_requests
 from dotenv import load_dotenv
 from rest_framework import status
 from rest_framework.response import Response
@@ -7,8 +9,9 @@ from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import SkinProfile
 from .serializers import SkinProfileSerializer
-
-# --- NEW: GEMINI AI IMPORTS & CONFIGURATION ---
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from rest_framework_simplejwt.tokens import RefreshToken
 import google.generativeai as genai
 
 # Load the secret variables from your .env file
@@ -20,6 +23,35 @@ if api_key:
     genai.configure(api_key=api_key)
 else:
     print("WARNING: GEMINI_API_KEY is missing from your .env file!")
+
+# --- NEW: OPEN BEAUTY FACTS API TOOL ---
+def search_beauty_product(product_type_or_name: str) -> str:
+    """Searches the Open Beauty Facts database for skincare products and returns their ingredients."""
+    # We use their JSON search API
+    url = f"https://world.openbeautyfacts.org/cgi/search.pl?search_terms={product_type_or_name}&search_simple=1&action=process&json=1"
+    
+    try:
+        #  to identify your app to their servers
+        headers = {'User-Agent': 'MySkinSpec_UniProject/1.0'}
+        response = python_requests.get(url, headers=headers)
+        data = response.json()
+        
+        if data.get('products') and len(data['products']) > 0:
+            # Grab the top 2 results to give the AI options
+            results = []
+            for i in range(min(2, len(data['products']))):
+                prod = data['products'][i]
+                name = prod.get('product_name', 'Unknown')
+                brand = prod.get('brands', 'Unknown Brand')
+                ingredients = prod.get('ingredients_text', 'No ingredients listed')
+                results.append(f"Product: {name} by {brand}. Ingredients: {ingredients}")
+            
+            return "\n\n".join(results)
+        else:
+            return f"No products found matching '{product_type_or_name}'."
+            
+    except Exception as e:
+        return f"Database search failed: {str(e)}"
 
 # --- EXISTING AUTH & PROFILE VIEWS ---
 
@@ -56,7 +88,6 @@ class UserProfileView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # --- NEW: GEMINI CHATBOT VIEW ---
 
 class GeminiChatView(APIView):
@@ -64,29 +95,40 @@ class GeminiChatView(APIView):
 
     def post(self, request):
         chat_history = request.data.get('history', [])
-
-        # THE UPDATED SYSTEM PROMPT WITH STRICT SKINFOCUS
+        
         system_instruction = """
         You are MySkinSpec, a professional, empathetic, and highly knowledgeable AI skincare consultant.
-        Your goal is to build a personalized skincare profile for the user by asking them questions, and to answer their skincare questions.
+        Your goal is to build a personalized skincare profile for the user through a natural conversation, and then generate a routine.
         
         CRITICAL RULES:
-        1. THE GUARDRAIL: You are strictly a skincare consultant. If the user asks you about politics, coding, math, history, or anything completely unrelated to skincare, dermatology, or cosmetics, you MUST politely refuse to answer. Say something like: "I am a dedicated skincare consultant, so I can only answer questions related to skin health and products."
-        2. Survey Mode: If you are building their profile, ask exactly ONE question at a time. Give multiple-choice options (A, B, C, D).
-        3. You need to find out: 
-           - skin_type (Oily, Dry, Combination, Normal)
-           - concerns (Acne, Aging, Redness, Texture, Dullness, Dark Spots)
-           - sensitivity (Low, Moderate, High)
-        4. Once you have gathered all 3 pieces of information, thank them, summarize their profile, and recommend 3 products.
+        1. You must ask exactly ONE question at a time. DO NOT give them the next question until they answer the current one.
+        2. Always give them multiple-choice options to make it easy to answer.
         
-        DATA SAVING RULE:
-        At the very end of your final recommendation message, include a hidden data tag exactly like this:
-        [PROFILE_DATA: {"skin_type": "Oily", "concerns": ["Acne"], "sensitivity": "Low"}]
+        THE EXACT SEQUENCE YOU MUST FOLLOW:
+        Step 1: Greet the user and ask: "What is your general skin type?" (Options: Oily, Dry, Combination, Normal).
+        Step 2: Acknowledge their answer and ask: "What is your beautiful skin color/tone?" (Options: Fair, Medium, Olive, Deep, etc.).
+        Step 3: Acknowledge and ask: "What are your primary skin concerns?" (Options: Acne, Aging, Redness, Texture, Dullness, Dark Spots).
+        Step 4: Acknowledge and ask: "Do you experience any skin sensitivity?" (Options: None, Occasional Redness, Frequent Irritation).
+        Step 5: Ask: "Thank you! I have everything I need. Are you ready for me to generate your personalized routine?"
+        
+        ROUTINE GENERATION (If they say Yes to Step 5):
+        1. Use the `search_beauty_product` tool to look up real products (e.g., search "CeraVe cleanser" or "Salicylic Acid serum") from the Open Beauty Facts database.
+        2. Generate a 4-step routine (Cleanser, Treatment, Moisturizer, SPF) specifically tailored to their answers, using the real products and ingredients you just found.
+        3. You MUST include a secret data tag at the very end of this routine message exactly like this:
+           [PROFILE_DATA: {"skin_type": "Oily", "skin_color": "Medium", "concerns": ["Acne"], "sensitivity": "Frequent Irritation"}]
+           (Replace the values with their actual answers. Notice it is skin_type and skin_color).
+           
+        Step 6 (After the routine): 
+        Ask: "Would you like to dive deeper into any of these products to see if their ingredients are safe for you on our Ingredient Analyser page?"
+        
+        PAGE REDIRECTION (If they say Yes to Step 6):
+        Say "Excellent! Transferring you to the Analyser now..." and you MUST append this exact secret tag to the end of your message: [NAVIGATE_ANALYSER]
         """
 
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash", 
-            system_instruction=system_instruction
+            model_name="gemini-2.5-flash",
+            system_instruction=system_instruction,
+            tools=[search_beauty_product] # give geminitool
         )
 
         try:
@@ -97,11 +139,15 @@ class GeminiChatView(APIView):
                     "parts": [msg['text']]
                 })
 
+            # We turn ON automatic function calling!
             if len(formatted_history) > 1:
-                chat = model.start_chat(history=formatted_history[:-1]) 
+                chat = model.start_chat(
+                    history=formatted_history[:-1],
+                    enable_automatic_function_calling=True
+                ) 
                 response = chat.send_message(formatted_history[-1]["parts"][0]) 
             else:
-                chat = model.start_chat()
+                chat = model.start_chat(enable_automatic_function_calling=True)
                 response = chat.send_message(formatted_history[0]["parts"][0])
 
             return Response({"reply": response.text})
@@ -115,8 +161,6 @@ class IngredientAnalyserView(APIView):
     permission_classes = [AllowAny] 
 
     def post(self, request):
-        # We still look for 'ingredients' in the request to not break the frontend,
-        # but we treat it as a general 'user_query' now.
         user_query = request.data.get('ingredients', '')
         profile = request.data.get('profile', {}) 
 
@@ -126,7 +170,7 @@ class IngredientAnalyserView(APIView):
         # Build a text summary of the user's profile if it exists
         profile_text = "Unknown/General User"
         if profile:
-            profile_text = f"Skin Type: {profile.get('skinType', 'Unknown')}, Sensitivity: {profile.get('sensitivity', 'Unknown')}, Concerns: {', '.join(profile.get('concerns', []))}"
+            profile_text = f"Skin Type: {profile.get('skin_type', 'Unknown')}, Sensitivity: {profile.get('sensitivity', 'Unknown')}, Concerns: {', '.join(profile.get('concerns', []))}"
 
         system_instruction = f"""
         You are a master dermatologist AI. The user will provide either a specific skincare product name, a single ingredient, or a full ingredient list.
@@ -158,7 +202,6 @@ class IngredientAnalyserView(APIView):
             chat = model.start_chat()
             response = chat.send_message(f"Analyze this input: {user_query}")
             
-            import json
             analysis_data = json.loads(response.text)
             
             return Response(analysis_data, status=status.HTTP_200_OK)
@@ -166,3 +209,42 @@ class IngredientAnalyserView(APIView):
         except Exception as e:
             print("GEMINI ANALYSER ERROR:", str(e))
             return Response({"error": "Failed to analyze input."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # The React frontend will send us Google's token
+        token = request.data.get('credential') 
+        
+        try:
+            # Ask Google to verify if this token is real and meant for our app
+            CLIENT_ID = "90331173295-8bdc26b1hius708d246sljrfe0ab96i8.apps.googleusercontent.com"
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), CLIENT_ID)
+
+            # extract the users data from Google response
+            email = idinfo['email']
+            first_name = idinfo.get('given_name', '')
+            last_name = idinfo.get('family_name', '')
+
+            #look up the user in our database. If they don't exist, create them!
+            user, created = User.objects.get_or_create(username=email, defaults={
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name
+            })
+
+            # Generate own MySkinSpec JWT tokens so they stay logged in
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'email': user.email,
+                'name': user.first_name,
+                'message': 'Successfully logged in with Google!'
+            }, status=status.HTTP_200_OK)
+
+        except ValueError:
+            # If a hacker tries to send a fake token, Google's verifier will trigger this
+            return Response({'error': 'Invalid Google Token'}, status=status.HTTP_400_BAD_REQUEST)
