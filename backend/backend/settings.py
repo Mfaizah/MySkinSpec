@@ -39,8 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'api',
+    'django_rest_passwordreset',
+
 ]
 
 MIDDLEWARE = [
@@ -81,6 +84,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'products_db': {
+        'ENGINE': 'djongo', # This is the connector for MongoDB
+        'NAME': 'skincare_products',
     }
 }
 
@@ -132,3 +139,4 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
