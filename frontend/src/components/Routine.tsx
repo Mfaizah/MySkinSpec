@@ -1,16 +1,35 @@
-// 1. Importing React so we can build the page
-import React from 'react';
+// 1. Importing React and our hooks for memory
+import React, { useState, useEffect } from 'react';
 
 // 2. Building the Routine component
 const Routine: React.FC = () => {
-  // Look in the browser's local memory for the saved profile
-  const savedProfileStr = localStorage.getItem('myskinspec_profile');
-  
-  // If it exists, turn it back into a JavaScript object. If not, make an empty object.
-  const profileData = savedProfileStr ? JSON.parse(savedProfileStr) : null;
-  
-  // Extract the routine array. If it doesn't exist, default to an empty array []
-  const routine: string[] = profileData?.recommended_routine || [];
+  // --- STATE MEMORY ---
+  // We need React state so the page actually re-renders when the data arrives!
+  const [routine, setRoutine] = useState<string[]>([]);
+  const [skinType, setSkinType] = useState<string>('unique');
+
+  // --- THE POLLING TRICK ---
+  // This forces the component to constantly check local storage for the routine
+  useEffect(() => {
+    const loadRoutineData = () => {
+      const savedProfileStr = localStorage.getItem('myskinspec_profile');
+      if (savedProfileStr) {
+        const profileData = JSON.parse(savedProfileStr);
+        // Safely update the state with the routine array and skin type
+        setRoutine(profileData.recommended_routine || []);
+        setSkinType(profileData.skin_type || 'unique');
+      }
+    };
+
+    // Run it immediately when the page loads
+    loadRoutineData();
+
+    // Check again every 1 second (1000ms) to catch the data as soon as Django syncs it!
+    const interval = setInterval(loadRoutineData, 1000);
+    
+    // Clean up to prevent memory leaks
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     // The main wrapper with our pastel fade
@@ -19,7 +38,7 @@ const Routine: React.FC = () => {
       {/* Header Section */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Your Daily Routine</h1>
-        <p className="text-lg text-slate-500">Custom-built for your {profileData?.skin_type || 'unique'} skin.</p>
+        <p className="text-lg text-slate-500">Custom-built for your {skinType} skin.</p>
       </div>
 
       {/* If the routine array is empty, show a friendly empty state */}
@@ -81,7 +100,6 @@ const Routine: React.FC = () => {
 
 // Exporting it so App.tsx can use it
 export default Routine;
-
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
 //https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener

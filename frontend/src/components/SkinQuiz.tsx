@@ -62,7 +62,8 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
   };
 
   // --- HANDLING THE 'CONTINUE' BUTTON ---
-  const handleNext = () => {
+  // made this an async function so it can wait for django to save
+  const handleNext = async () => {
     // check if we are on the very last question or not
     if (step < questions.length - 1) {
       // if not, simply increase the step counter by 1 to show the next question
@@ -71,6 +72,21 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
       // IF IT IS THE LAST QUESTION:
       // save their completely finished profile into the browser's local storage memory
       localStorage.setItem('myskinspec_profile', JSON.stringify(profile));
+      
+      // FIX #3: Immediately push the quiz answers to Django so it is safely stored in the database!
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          await fetch('http://127.0.0.1:8000/api/profile/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(profile)
+          });
+        } catch (e) {
+          console.log("Failed to save quiz to database");
+        }
+      }
+
       // then fire the 'onComplete' function to tell App.tsx to change the screen to the Chatbot!
       onComplete(profile);
     }
@@ -83,7 +99,7 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
   // --- THE VISUAL PART (HTML/TAILWIND) ---
   return (
     // the main glassy card wrapper for the quiz
-    <div className="max-w-2xl mx-auto my-12 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white p-8">
+    <div className="max-w-2xl mx-auto my-12 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white p-8 animate-fade-in">
       
       {/* --- THE PROGRESS BAR --- */}
       <div className="w-full bg-slate-100 h-2 rounded-full mb-8 overflow-hidden">
@@ -153,7 +169,6 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
 
 // exporting it so the App router can find it
 export default SkinQuiz;
-
 //https://react.dev/learn/state-a-components-memory
 //https://react.dev/learn/updating-objects-in-state
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter

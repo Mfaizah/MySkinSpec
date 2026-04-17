@@ -25,10 +25,10 @@ const ProductAnalyser: React.FC = () => {
   const [input, setInput] = useState('');
   
   // --- NEW MEMORY FEATURE ---
-  // i check the browser's sessionStorage to see if they already scanned something in this tab!
+  // i check the browser's localStorage to see if they already scanned something!
   const [messages, setMessages] = useState<Message[]>(() => {
     // try to grab the saved chat from the browser's memory
-    const savedChat = sessionStorage.getItem('myskinspec_analyser');
+    const savedChat = localStorage.getItem('myskinspec_analyser');
     // if i found it, unpack the JSON and put it on the screen
     if (savedChat) return JSON.parse(savedChat);
     
@@ -37,9 +37,9 @@ const ProductAnalyser: React.FC = () => {
   });
 
   // this useEffect watches the 'messages' array. every time a new message is added, 
-  // it saves the newest version of the chat straight into sessionStorage
+  // it saves the newest version of the chat straight into localStorage
   useEffect(() => {
-    sessionStorage.setItem('myskinspec_analyser', JSON.stringify(messages));
+    localStorage.setItem('myskinspec_analyser', JSON.stringify(messages));
   }, [messages]);
   
   // a simple true/false switch to turn on my bouncy loading dots
@@ -115,7 +115,7 @@ const ProductAnalyser: React.FC = () => {
   // --- RESTART BUTTON FUNCTION ---
   // this wipes the session memory completely and refreshes the page to start over
   const handleRestart = () => {
-    sessionStorage.removeItem('myskinspec_analyser');
+    localStorage.removeItem('myskinspec_analyser');
     window.location.reload(); 
   };
 
@@ -127,7 +127,6 @@ const ProductAnalyser: React.FC = () => {
       {/* Top Header Section */}
       <div className="bg-blue-50 p-5 border-b border-blue-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          {/* Magnifying glass icon for the analyser theme */}
           <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-2xl shadow-sm">🔍</div>
           <div>
             <h2 className="font-bold text-slate-800 text-lg">Ingredient Analyser</h2>
@@ -288,7 +287,6 @@ const ProductAnalyser: React.FC = () => {
 
 // exporting it so the rest of the app can use it
 export default ProductAnalyser;
-
 //https://www.typescriptlang.org/docs/handbook/interfaces.html
 //https://react.dev/learn/conditional-rendering
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining

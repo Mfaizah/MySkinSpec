@@ -19,19 +19,19 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
   const [input, setInput] = useState('');
   
   // --- NEW MEMORY FEATURE ---
-  // instead of starting with an empty chat, i check the browser's 'sessionStorage' first.
+  // instead of starting with an empty chat, i check the browser's 'localStorage' first.
   // this way, if they click a different page and come back, the chat history doesn't wipe!
   const [messages, setMessages] = useState<Message[]>(() => {
-    // try to grab the saved chat from the current tab's memory
-    const savedChat = sessionStorage.getItem('myskinspec_chat');
+    // try to grab the saved chat from the browser's permanent memory
+    const savedChat = localStorage.getItem('myskinspec_chat');
     // if i found it, unpack the JSON. if it's empty, just start with an empty array []
     return savedChat ? JSON.parse(savedChat) : [];
   });
   
   // this useEffect runs every single time the 'messages' list updates.
-  // it takes the newest version of the chat and saves it right back into sessionStorage.
+  // it takes the newest version of the chat and saves it right back into localStorage.
   useEffect(() => {
-    sessionStorage.setItem('myskinspec_chat', JSON.stringify(messages));
+    localStorage.setItem('myskinspec_chat', JSON.stringify(messages));
   }, [messages]);
 
   // a simple true/false switch to turn on my bouncy loading bubbles when the AI is thinking
@@ -189,9 +189,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
   };
 
   // --- RESTART BUTTON ---
-  // this function wipes the session memory and refreshes the page to start the chat over
+  // this function wipes the chat memory and refreshes the page to start the chat over
   const handleRestart = () => {
-    sessionStorage.removeItem('myskinspec_chat');
+    localStorage.removeItem('myskinspec_chat');
     window.location.reload(); 
   };
 
@@ -203,7 +203,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
       {/* Top Header Section */}
       <div className="bg-blue-50 p-5 border-b border-blue-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          {/* A cute sparkly icon to match the AI vibe */}
           <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-2xl shadow-sm">✨</div>
           <div>
             <h2 className="font-bold text-slate-800 text-lg">AI Consultant</h2>
@@ -307,7 +306,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
 };
 
 export default ChatBot;
-
 
 
 //https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage

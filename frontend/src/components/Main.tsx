@@ -1,14 +1,20 @@
+// first, i need to import React so i can build this component
 import React from 'react';
 
+// this is my typescript rulebook (interface) that tells my Main component 
+// which functions it's going to receive from the parent App.tsx file
 interface MainProps {
-  onStartChat: () => void;
-  onLearnMore: () => void;
+  onStartChat: () => void; // function to jump to the Quiz/Chat page
+  onLearnMore: () => void; // function to jump to the Analyser page
 }
 
+// building the actual Home Page component
 const Main: React.FC<MainProps> = ({ onStartChat, onLearnMore }) => {
   return (
-    // THE MASTER WRAPPER: Soft pastel gradient background to match your other pages
-    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-yellow-50 flex flex-col font-sans text-slate-800">
+    // THE MASTER WRAPPER
+    // CHANGED: I removed the local background colors completely! 
+    // Now it perfectly inherits the 'bg-gradient-to-b from-blue-50 to-yellow-50' from App.tsx.
+    <div className="relative flex flex-col w-full">
       
       {/* ========================================== */}
       {/* 1. THE HERO SECTION (Centered & Clean)       */}
@@ -53,7 +59,7 @@ const Main: React.FC<MainProps> = ({ onStartChat, onLearnMore }) => {
       {/* ========================================== */}
       {/* 2. HOW IT WORKS (The Anti-Box Editorial Layout) */}
       {/* ========================================== */}
-      {/* No boxes, no backgrounds. Just clean text and dividers flowing over the pastel gradient. */}
+      {/* No boxes, no backgrounds. Just clean text and dividers flowing over the inherited pastel gradient. */}
       <div className="relative z-20 py-24">
         <div className="max-w-3xl mx-auto px-6">
           
@@ -133,4 +139,5 @@ export default Main;
 //https://tailwindcss.com/docs/rotate
 //https://tailwindcss.com/docs/hover-focus-and-other-states
 //https://www.beside.com/ inspiration for landing page
-//https://doctorlensai.lovable.app/ for the bento grid cards
+//https://ui.aceternity.com/templates/nodus-agent-template
+//https://github.com/shadcn-ui/ui

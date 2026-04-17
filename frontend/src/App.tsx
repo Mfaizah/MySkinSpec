@@ -17,88 +17,86 @@ import { ViewState, SurveyResult } from './types';
 const App: React.FC = () => {
   // --- STATE SETUP ---
   
-  // tracks what page we're currently on. defaults to the home page.
-  const [currentView, setCurrentView] = useState<ViewState | 'profile'>('home');
+  // FIX #1: We tell React to look in sessionStorage to remember what page we were on before the refresh!
+  const [currentView, setCurrentView] = useState<ViewState | 'profile'>(() => {
+    return (sessionStorage.getItem('current_view') as ViewState | 'profile') || 'home';
+  });
   
-  // holds the user's skin profile data in memory
   const [userProfile, setUserProfile] = useState<SurveyResult | null>(null);
-  
-  // checks local storage right on load to see if someone is already logged in
   const [userName, setUserName] = useState<string | null>(localStorage.getItem('user_name'));
 
   // --- MY CUSTOM ROUTER & GATEKEEPER ---
-  // instead of a normal link, buttons call this function so i can check if they're allowed to view the page
   const handleViewChange = (newView: ViewState | 'profile') => {
-    // check if we have a username saved in the browser
     const isLoggedIn = !!localStorage.getItem('user_name');
-    
-    // if they try to access a premium feature but aren't logged in, block them
     if ((newView === 'routine' || newView === 'analyse') && !isLoggedIn) {
       alert('🔒 Please sign in or create a free account to save your routine and unlock the Analyser!');
-      // redirect them to the login screen
       setCurrentView('profile');
+      sessionStorage.setItem('current_view', 'profile'); // Save view to memory
     } else {
-      // otherwise, let them go to the page they clicked
       setCurrentView(newView);
+      sessionStorage.setItem('current_view', newView); // Save view to memory
     }
   };
 
-  // --- DB SYNC ON LOGIN ---
-  // this hook fires whenever 'userName' changes (like when they log in)
-  // it fetches their specific profile from django so they don't inherit another user's local data
+  // --- DB SYNC ON LOGIN / REFRESH ---
   useEffect(() => {
     if (userName) {
       const token = localStorage.getItem('access_token');
       if (token) {
-        // hit the django profile endpoint
+        
+        // FIX #2: If we have a local profile, push it up to Django FIRST so Django doesn't accidentally wipe it!
+        const localData = localStorage.getItem('myskinspec_profile');
+        if (localData) {
+           const parsed = JSON.parse(localData);
+           if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
+               fetch('http://127.0.0.1:8000/api/profile/', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify(parsed)
+               }).catch(e => console.log("Upward sync failed"));
+           }
+        }
+
+        // Then pull the authoritative version from Django
         fetch('http://127.0.0.1:8000/api/profile/', {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => res.json())
         .then(data => {
-          // if django returns actual data (not an empty object or error), save it
           if (data && !data.error && Object.keys(data).length > 0) {
-            setUserProfile(data);
-            localStorage.setItem('myskinspec_profile', JSON.stringify(data));
+            // ONLY overwrite local storage if Django actually has a real profile saved
+            if (data.skin_type !== 'Unknown' || (data.recommended_routine && data.recommended_routine.length > 0)) {
+              setUserProfile(data);
+              localStorage.setItem('myskinspec_profile', JSON.stringify(data));
+            }
           }
         })
-        // failing silently here because it just means they don't have a profile yet
         .catch(err => console.log("Silent background sync failed.")); 
       }
     }
   }, [userName]); 
 
   // --- THE POLLING TRICK ---
-  // this runs once when the app mounts. it constantly checks local storage for profile updates
   useEffect(() => {
     const checkProfile = () => {
       const saved = localStorage.getItem('myskinspec_profile');
       if (saved) setUserProfile(JSON.parse(saved));
     };
     
-    // run it immediately
     checkProfile();
-    // set an interval to check every 2 seconds. keeps the profile page updated if the AI changes something.
     const interval = setInterval(checkProfile, 2000);
-    
-    // clean up the interval when the component unmounts to prevent memory leaks
     return () => clearInterval(interval);
   }, []); 
 
   // --- MANUAL PROFILE EDITS ---
-  // fires when the user manually changes a dropdown on their profile page
   const handleProfileUpdate = (key: string, value: any) => {
     if (!userProfile) return; 
-    
-    // clone the existing profile and update just the one key they changed
     const updated = { ...userProfile, [key]: value };
     
-    // update react state and local storage immediately
     setUserProfile(updated);
     localStorage.setItem('myskinspec_profile', JSON.stringify(updated));
     
-    // silently fire off a POST request to django to save the edit in the real database
     const token = localStorage.getItem('access_token');
     if (token) {
       fetch('http://127.0.0.1:8000/api/profile/', {
@@ -109,19 +107,53 @@ const App: React.FC = () => {
     }
   };
 
+  // --- RESET PROFILE LOGIC ---
+  const handleResetProfile = async () => {
+    const blankProfile = {
+      skin_type: 'Unknown',
+      skin_color: 'Unknown',
+      sensitivity: 'Unknown',
+      country: 'Unknown',
+      item_count: 'Unknown',
+      concerns: [],
+      recommended_routine: [] 
+    };
+
+    localStorage.removeItem('myskinspec_chat');
+    localStorage.removeItem('myskinspec_analyser');
+
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        await fetch('http://127.0.0.1:8000/api/profile/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(blankProfile)
+        });
+      } catch (err) {
+        console.log("Database reset failed");
+      }
+    }
+
+    setUserProfile(blankProfile);
+    localStorage.setItem('myskinspec_profile', JSON.stringify(blankProfile));
+
+    alert("✨ Profile and Routine have been completely reset! You can now take the quiz again.");
+    
+    handleViewChange('quiz'); // Safely change the view
+  };
+
   // --- LOGOUT LOGIC ---
   const handleLogout = () => {
-    // nuke all auth tokens
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_name');
     
-    // NUKE ALL PERSONAL DATA. this stops the dreaded state leak bug between different users.
     localStorage.removeItem('myskinspec_profile'); 
-    sessionStorage.removeItem('myskinspec_chat');
-    sessionStorage.removeItem('myskinspec_analyser');
+    sessionStorage.removeItem('current_view'); // Wipe the saved view so it goes back to home
     
-    // wipe the react state and boot them back to the home page
+    // (Note: Deliberately keeping the chat memory intact here as requested!)
+    
     setUserProfile(null);
     setUserName(null);
     setCurrentView('home');
@@ -129,74 +161,67 @@ const App: React.FC = () => {
 
   // --- JSX RENDER ---
   return (
-    // main wrapper. min-h-screen makes sure the gradient always hits the bottom of the monitor
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-yellow-50 font-sans text-slate-800 flex flex-col">
       
-      {/* inject the navbar and hand it the gatekeeper function so the links work securely */}
       <Navbar currentView={currentView as ViewState} setView={handleViewChange} />
       
-      {/* flex-grow pushes the footer (if i had one) to the bottom and takes up remaining space */}
       <main className="flex-grow">
-        
-        {/* my poor-man's router. just checking the state string and showing the right component */}
         {currentView === 'home' && <Main onStartChat={() => handleViewChange('quiz')} onLearnMore={() => handleViewChange('analyse')} />}
         {currentView === 'quiz' && <SkinQuiz onComplete={() => handleViewChange('chat')} />}
         {currentView === 'chat' && <ChatBot onNavigateToAnalyser={() => handleViewChange('analyse')} />}
         {currentView === 'analyse' && <ProductAnalyser />} 
         {currentView === 'routine' && <Routine />} 
         
-        {/* --- THE PROFILE DASHBOARD --- */}
-        {/* this huge block handles both the login screen and the actual profile data screen */}
         {currentView === 'profile' && (
           <div className="max-w-4xl mx-auto my-12 p-8 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white relative animate-fade-in">
 
-            {/* if they don't have a username, show the login/register view */}
             {!userName ? (
               <div className="grid md:grid-cols-2 gap-12 items-center mt-6">
-                
-                {/* left side marketing copy */}
                 <div className="text-center md:text-left">
                   <div className="bg-yellow-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-2xl shadow-sm mx-auto md:mx-0">🔒</div>
                   <h2 className="text-3xl font-bold text-slate-800 mb-4 tracking-tight">Unlock your skin profile.</h2>
                   <p className="text-slate-500 mb-8 leading-relaxed">Save your personalised AI recommendations, track your routines, and get faster ingredient analysis.</p>
                 </div>
                 
-                {/* right side forms */}
                 <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm">
-                  {/* standard email auth component */}
                   <AuthForm onSuccessLogin={(name) => setUserName(name)} />
                   
-                  {/* css trick to make a nice 'OR' divider line */}
                   <div className="relative flex py-4 items-center">
                     <div className="flex-grow border-t border-slate-200"></div>
                     <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase font-bold">Or</span>
                     <div className="flex-grow border-t border-slate-200"></div>
                   </div>
                   
-                  {/* google oauth button */}
                   <div className="flex justify-center">
                     <GoogleAuthButton onSuccessLogin={(name) => setUserName(name)} />
                   </div>
                 </div>
               </div>
             ) : (
-              
-              // if they ARE logged in, show their dashboard
               <div className="mt-6">
-                
-                {/* welcome header and sign out button */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-800">Hello, {userName}! 👋</h2>
+                    <h2 className="text-3xl font-bold text-slate-800">Hello, {userName}! ✨</h2>
                     <p className="text-slate-500 mt-1">Manage your complete Skin Profile data below.</p>
                   </div>
-                  <button onClick={handleLogout} className="text-slate-500 text-sm font-semibold hover:bg-slate-100 px-5 py-2 rounded-full transition-colors border border-slate-200">
-                    Sign Out
-                  </button>
+                  
+                  <div className="flex gap-3 w-full md:w-auto">
+                    <button 
+                      onClick={handleResetProfile} 
+                      className="w-full md:w-auto text-red-500 text-sm font-semibold hover:bg-red-50 px-5 py-2 rounded-full transition-colors border border-red-200"
+                    >
+                      Reset Profile
+                    </button>
+                    <button 
+                      onClick={handleLogout} 
+                      className="w-full md:w-auto text-slate-500 text-sm font-semibold hover:bg-slate-100 px-5 py-2 rounded-full transition-colors border border-slate-200"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
 
-                {/* if they are logged in but haven't taken the quiz yet, prompt them to do it */}
-                {!userProfile ? (
+                {(!userProfile || userProfile.skin_type === 'Unknown') ? (
                   <div className="text-center py-16 bg-gradient-to-b from-blue-50 to-white rounded-3xl border border-blue-100">
                     <div className="text-4xl mb-4">🤔</div>
                     <p className="text-slate-500 mb-6 text-lg">You haven't built your profile yet!</p>
@@ -205,13 +230,9 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  
-                  // the actual form data they can edit
                   <div className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                      
                       <div className="grid grid-cols-2 gap-4">
-                        {/* standard controlled select inputs. changing them fires handleProfileUpdate */}
                         <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Skin Type</label>
                           <select value={userProfile.skin_type || "Unknown"} onChange={(e) => handleProfileUpdate('skin_type', e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none font-medium text-slate-700">
@@ -248,27 +269,23 @@ const App: React.FC = () => {
                         </select>
                       </div>
                       
-                      {/* the concerns input is tricky. it has to split the string by commas to save as an array, and join by commas to display it. */}
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Concerns (Comma Separated)</label>
                         <input type="text" value={userProfile.concerns?.join(', ') || ""} onChange={(e) => handleProfileUpdate('concerns', e.target.value.split(',').map(s => s.trim()))} className="w-full p-3 border border-slate-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none font-medium text-slate-700"/>
                       </div>
                     </div>
                     
-                    {/* status card letting them know the AI is linked to this data */}
                     <div className="bg-gradient-to-b from-yellow-50 to-white rounded-3xl p-6 flex flex-col justify-center items-center text-center border border-yellow-100 shadow-sm h-full">
                       <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm border border-yellow-100">✨</div>
                       <h3 className="font-bold text-slate-800 text-lg mb-2">Profile Synced</h3>
                       <p className="text-slate-600 text-sm mb-4">Your AI Consultant and Ingredient Analyser are actively using this data.</p>
                       
-                      {/* only show the routine button if the array exists and actually has stuff in it */}
                       {userProfile.recommended_routine && userProfile.recommended_routine.length > 0 && (
                         <button onClick={() => handleViewChange('routine')} className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold px-6 py-2 rounded-full text-sm transition-colors shadow-sm">
                           View My Saved Routine
                         </button>
                       )}
                     </div>
-                    
                   </div>
                 )}
               </div>
@@ -276,14 +293,21 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      <footer className="bg-slate-900 text-slate-400 py-10 px-6 mt-auto">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs leading-relaxed">
+            <strong className="text-slate-300">Medical Disclaimer:</strong> MySkinSpec is an AI-powered educational tool. The information and recommendations provided by our AI Consultant and Ingredient Analyser are not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician, dermatologist, or other qualified health provider with any questions you may have regarding a medical condition or severe skin concern.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
 
-// --- AUTH FORM COMPONENT ---
 const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }) => {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [email, setEmail] = useState(''); // Changed from username to email!
+  const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -296,7 +320,6 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
       const res = await fetch(`http://127.0.0.1:8000/api/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Sending 'email' instead of 'username'
         body: JSON.stringify({ email, password }) 
       });
       const data = await res.json();
@@ -309,8 +332,6 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
           localStorage.setItem('access_token', data.access);
           localStorage.setItem('refresh_token', data.refresh);
           
-          // UX TRICK: Split the email at the '@' symbol and grab the first part 
-          // so it says "Hello, sarah!" instead of "Hello, sarah@gmail.com!"
           const displayName = email.split('@')[0];
           
           localStorage.setItem('user_name', displayName);
@@ -328,7 +349,6 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
     <form onSubmit={handleSubmit} className="space-y-3">
       <h3 className="font-bold text-slate-800 mb-4 text-center">{isRegistering ? 'Create an Account' : 'Sign in with Email'}</h3>
       
-      {/* Changed type="text" to type="email" to force the browser to validate the @ symbol */}
       <input 
         type="email" 
         value={email} 
@@ -345,14 +365,28 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
         required 
         className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-400 focus:outline-none" 
       />
+
+      {isRegistering && (
+        <div className="flex items-start gap-3 mt-4 mb-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+          <input 
+            type="checkbox" 
+            id="medical-disclaimer" 
+            required 
+            className="mt-1 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+          />
+          <label htmlFor="medical-disclaimer" className="text-xs text-slate-600 leading-tight cursor-pointer">
+            I understand that MySkinSpec provides AI-generated recommendations and is <strong className="text-slate-800">not a substitute for professional medical advice</strong>. I agree to consult a dermatologist for medical conditions.
+          </label>
+        </div>
+      )}
       
       {error && <p className={`text-xs font-semibold ${error.includes('successful') ? 'text-green-600' : 'text-red-500'}`}>{error}</p>}
       
-      <button type="submit" className="w-full py-3 bg-blue-400 text-white font-bold rounded-xl hover:bg-blue-500 transition-colors shadow-sm">
+      <button type="submit" className="w-full py-3 bg-blue-400 text-white font-bold rounded-xl hover:bg-blue-500 transition-colors shadow-sm mt-2">
         {isRegistering ? 'Register' : 'Sign In'}
       </button>
       
-      <p onClick={() => { setIsRegistering(!isRegistering); setError(''); }} className="text-xs text-center text-slate-500 cursor-pointer hover:text-blue-500 mt-2">
+      <p onClick={() => { setIsRegistering(!isRegistering); setError(''); }} className="text-xs text-center text-slate-500 cursor-pointer hover:text-blue-500 mt-2 pt-2">
         {isRegistering ? 'Already have an account? Sign In.' : 'Need an account? Register here.'}
       </p>
     </form>
