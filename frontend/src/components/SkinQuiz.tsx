@@ -76,7 +76,7 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
       const token = localStorage.getItem('access_token');
       if (token) {
         try {
-          await fetch('http://127.0.0.1:8000/api/profile/', {
+          await fetch('https://myskinspec.onrender.com/api/profile/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(profile)

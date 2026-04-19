@@ -19,7 +19,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccessLogin }) =
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
       // google gives us a secure 'credential' token. i use fetch to send this token straight to my django backend
-      const res = await fetch('http://127.0.0.1:8000/api/google-login/', {
+      const res = await fetch('https://myskinspec.onrender.com/api/google-login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // packaging up the google token into a JSON string

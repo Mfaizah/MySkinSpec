@@ -99,7 +99,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
     // now i try to talk to the django backend
     try {
       // i make a POST request to my django chat API
-      const res = await fetch('http://127.0.0.1:8000/api/chat/', {
+      const res = await fetch('https://myskinspec.onrender.com/api/chat/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // i send the ENTIRE chat history to django so the AI remembers what we were talking about
@@ -143,7 +143,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
             const token = localStorage.getItem('access_token');
             if (token) {
               // if they are logged in, i send the newly merged profile to Django so it saves in the database permanently!
-              fetch('http://127.0.0.1:8000/api/profile/', {
+              fetch('https://myskinspec.onrender.com/api/profile/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(mergedProfile),

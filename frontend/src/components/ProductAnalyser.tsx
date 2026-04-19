@@ -85,7 +85,7 @@ const ProductAnalyser: React.FC = () => {
       const headers: any = { 'Content-Type': 'application/json' };
       
       // send BOTH the text they typed AND their profile data to the Django analyser endpoint
-      const res = await fetch('http://127.0.0.1:8000/api/analyse/', {
+      const res = await fetch('https://myskinspec.onrender.com/api/analyse/', {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ ingredients: textToSend, profile: profileData })

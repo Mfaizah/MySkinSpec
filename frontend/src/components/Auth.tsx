@@ -43,7 +43,7 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onLoginSuccess }) => {
     setIsLoading(true);
 
     // i check my 'isLogin' switch to decide which backend URL to talk to
-    const endpoint = isLogin ? 'http://127.0.0.1:8000/api/login/' : 'http://127.0.0.1:8000/api/register/';
+    const endpoint = isLogin ? 'https://myskinspec.onrender.com/api/login/' : 'https://myskinspec.onrender.com/api/register/';
 
     // now i try to talk to the django server
     try {
