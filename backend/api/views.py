@@ -393,8 +393,8 @@ class GoogleLoginView(APIView):
         token = request.data.get('credential') 
         try:
             # this is my public google client ID
-            CLIENT_ID = "90331173295-8bdc26b1hius708d246sljrfe0ab96i8.apps.googleusercontent.com"
-            
+            CLIENT_ID = "90331173295-1arcd395730f4o3qlgv7pe6c00srt20k.apps.googleusercontent.com"      
+
             # verifying the token against google's actual servers to ensure it wasn't faked
             idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), CLIENT_ID)
             
@@ -427,16 +427,14 @@ class GoogleLoginView(APIView):
             return Response({'error': 'Invalid Google Token'}, status=status.HTTP_400_BAD_REQUEST)
 
 # --- PASSWORD RESET EMAIL FEATURE ---
-# this is a django signal receiver. it listens for when a user requests a password reset
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
-    # building the URL that points back to my react frontend, including the secret reset token
-    frontend_reset_url = f"http://localhost:5173/?reset_token={reset_password_token.key}"
+    # link will now point to your live university site base URL
+    frontend_reset_url = f"https://w1985499.users.ecs.westminster.ac.uk/?reset_token={reset_password_token.key}"
     
     email_subject = "Reset Your MySkinSpec Password"
     email_body = f"Hello! \n\nYou requested a password reset for MySkinSpec. \n\nClick this link to create a new password: \n{frontend_reset_url} \n\nIf you did not request this, please ignore this email."
     
-    # sending the actual email via django's built in mailer
     send_mail(email_subject, email_body, "noreply@myskinspec.com", [reset_password_token.user.email], fail_silently=False)
     #https://ai.google.dev/gemini-api/docs/text-generation
     #https://ai.google.dev/gemini-api/docs/function-calling?example=meeting
