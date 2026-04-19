@@ -265,7 +265,10 @@ const App: React.FC = () => {
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Routine Size</label>
                         <select value={userProfile.item_count || "Unknown"} onChange={(e) => handleProfileUpdate('item_count', e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none font-medium text-slate-700">
-                          <option>1-2 items (Minimalist)</option><option>3-4 items (Standard)</option><option>5+ items (Comprehensive)</option><option>Unknown</option>
+                          <option>3 items (Basic)</option>
+                          <option>4-5 items (Advanced)</option>
+                          <option>6+ items (Comprehensive)</option>
+                          <option>Unknown</option>
                         </select>
                       </div>
                       

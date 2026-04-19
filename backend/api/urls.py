@@ -1,5 +1,4 @@
 from django.urls import path, include
-# Notice we imported EmailTokenObtainPairView here!
 from .views import UserProfileView, RegisterUserView, GeminiChatView, IngredientAnalyserView, GoogleLoginView, EmailTokenObtainPairView
 
 urlpatterns = [

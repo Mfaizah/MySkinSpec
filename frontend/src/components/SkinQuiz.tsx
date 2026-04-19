@@ -31,8 +31,7 @@ const SkinQuiz: React.FC<SkinQuizProps> = ({ onComplete }) => {
     { key: 'concerns', title: 'What are your primary skin concerns? (Select all that apply)', options: ['Acne', 'Ageing', 'Redness', 'Texture', 'Dullness'], multi: true },
     { key: 'sensitivity', title: 'Do you experience skin sensitivity?', options: ['None', 'Occasional Redness', 'Frequent Irritation'] },
     { key: 'country', title: 'Which country are you located in?', options: ['UK', 'US', 'Canada', 'Australia', 'Other'] },
-    { key: 'item_count', title: 'How many items do you want in your routine?', options: ['1-2 items (Minimalist)', '3-4 items (Standard)', '5+ items (Comprehensive)'] }
-  ];
+    { key: 'item_count', title: 'How many items do you want in your routine?', options: ['3 items (Basic)', '4-5 items (Advanced)', '6+ items (Comprehensive)'] }  ];
 
   // --- HANDLING USER CLICKS ---
   // this function runs every time a user taps one of the answer buttons
