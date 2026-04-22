@@ -18,7 +18,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
   // i need a memory spot (state) to hold whatever the user is currently typing in the input box
   const [input, setInput] = useState('');
   
-  // --- NEW MEMORY FEATURE ---
+  //  NEW MEMORY FEATURE 
   // instead of starting with an empty chat, i check the browser's 'localStorage' first.
   // this way, if they click a different page and come back, the chat history doesn't wipe!
   const [messages, setMessages] = useState<Message[]>(() => {

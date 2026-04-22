@@ -15,7 +15,7 @@ import { ViewState, SurveyResult } from './types';
 
 // this is the main shell component that wraps around the entire website
 const App: React.FC = () => {
-  // --- STATE SETUP (THE APP'S MEMORY) ---
+  //  STATE SETUP (THE APP'S MEMORY) 
   
   // FIX #1: We tell React to look in the browser's temporary sessionStorage to remember what page we were on before the refresh!
   // if there's nothing saved, we default to the 'home' page.
@@ -66,7 +66,7 @@ const App: React.FC = () => {
            // if the local profile actually has real data (not just 'Unknown')...
            if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
                // send it to the live Render backend!
-               fetch('https://myskinspec-backend.onrender.com/api/profile/', {
+               fetch('https://myskinspec.onrender.com/api/profile/', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify(parsed)
@@ -75,7 +75,7 @@ const App: React.FC = () => {
         }
 
         // Then, pull the authoritative version down from the live Django database to make sure we are fully synced
-        fetch('https://myskinspec-backend.onrender.com/api/profile/', {
+        fetch('https://myskinspec.onrender.com/api/profile/', {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -123,7 +123,7 @@ const App: React.FC = () => {
     // then silently send the update to the live Django database in the background
     const token = localStorage.getItem('access_token');
     if (token) {
-      fetch('https://myskinspec-backend.onrender.com/api/profile/', {
+      fetch('https://myskinspec.onrender.com/api/profile/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(updated)
@@ -153,7 +153,7 @@ const App: React.FC = () => {
     const token = localStorage.getItem('access_token');
     if (token) {
       try {
-        await fetch('https://myskinspec-backend.onrender.com/api/profile/', {
+        await fetch('https://myskinspec.onrender.com/api/profile/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify(blankProfile)
@@ -392,7 +392,7 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
     
     try {
       // make the API call to our LIVE backend
-      const res = await fetch(`https://myskinspec-backend.onrender.com/api/${endpoint}`, {
+      const res = await fetch(`https://myskinspec.onrender.com.com/api/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }) 
