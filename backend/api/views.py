@@ -41,7 +41,7 @@ from django.core.mail import send_mail
 # this executes the load, actually pulling the secret variables from my .env file into the code
 load_dotenv() 
 
-# --- AI SETUP ---
+#  AI SETUP
 # grabbing my gemini key and configuring the AI. if i forget to add it to my .env, it prints a warning.
 api_key = os.getenv("GEMINI_API_KEY")
 if api_key:
@@ -58,7 +58,7 @@ safe_config = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
 
-# --- OPEN BEAUTY FACTS API TOOL ---
+# OPEN BEAUTY FACTS API TOOL 
 # this is a custom python function that i give to the AI so it can search a real cosmetics database!
 def search_beauty_product(product_type_or_name: str) -> str:
     # building the search URL dynamically based on what the AI wants to look up
@@ -94,7 +94,7 @@ def search_beauty_product(product_type_or_name: str) -> str:
         # if the fetch totally crashes, i pass the error back safely
         return f"Database search failed: {str(e)}"
 
-# --- GEMINI CHATBOT VIEW ---
+#  GEMINI CHATBOT VIEW 
 class GeminiChatView(APIView):
     # anyone can use the chatbot, even if they aren't logged in yet (freemium model!)
     permission_classes = [AllowAny] 
@@ -120,7 +120,7 @@ class GeminiChatView(APIView):
             except:
                 pass # if they don't have one yet, just ignore it and use whatever react sent
 
-        # --- THE ULTIMATE K-BEAUTY & SAFETY MEGA-PROMPT ---
+        #  THE ULTIMATE K-BEAUTY & SAFETY MEGA-PROMPT 
         # this massive f-string is the "brain" of the AI. it forces gemini to follow strict medical rules.
         # notice i use double curly braces {{ }} for the JSON tags so python doesn't get confused by the f-string!
         # --- THE ULTIMATE CLINICAL K-BEAUTY MEGA-PROMPT ---
@@ -167,7 +167,7 @@ class GeminiChatView(APIView):
 
         USER'S SAVED DATABASE PROFILE: 
         {profile_string}
-        """# --- THE ULTIMATE CLINICAL K-BEAUTY MEGA-PROMPT ---
+        """#  THE ULTIMATE CLINICAL K-BEAUTY MEGA-PROMPT
         system_instruction = f"""
         You are MySkinSpec, a professional AI skincare consultant. You possess vast dermatological knowledge. 
         
@@ -256,7 +256,7 @@ class GeminiChatView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# --- CUSTOM EMAIL LOGIN SERIALIZER & VIEW ---
+# CUSTOM EMAIL LOGIN SERIALIZER & VIEW 
 # django really, really wants us to use a 'username' to log in by default.
 # to fix this and make it modern (email only), i built this custom serializer
 # that tricks django into accepting an email instead!
@@ -278,7 +278,7 @@ class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
 
-# --- USER REGISTRATION ---
+#  USER REGISTRATION 
 class RegisterUserView(APIView):
     # anyone can hit the registration endpoint
     permission_classes = [AllowAny] 
@@ -304,7 +304,7 @@ class RegisterUserView(APIView):
         
         return Response({"message": "Account created successfully!"}, status=status.HTTP_201_CREATED)
 
-# --- USER PROFILE MANAGEMENT ---
+#  USER PROFILE MANAGEMENT 
 class UserProfileView(APIView):
     # you MUST be logged in with a valid JWT token to use these endpoints!
     permission_classes = [IsAuthenticated] 
@@ -326,7 +326,7 @@ class UserProfileView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# --- INGREDIENT ANALYSER VIEW ---
+#  INGREDIENT ANALYSER VIEW 
 class IngredientAnalyserView(APIView):
     permission_classes = [AllowAny] 
     def post(self, request):
@@ -385,7 +385,7 @@ class IngredientAnalyserView(APIView):
         except Exception as e:
             return Response({"error": "Failed to analyse input."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# --- GOOGLE OAUTH LOGIN ---
+# GOOGLE OAUTH LOGIN
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
@@ -426,7 +426,7 @@ class GoogleLoginView(APIView):
             # if google rejects the token, throw an error
             return Response({'error': 'Invalid Google Token'}, status=status.HTTP_400_BAD_REQUEST)
 
-# --- PASSWORD RESET EMAIL FEATURE ---
+# PASSWORD RESET EMAIL FEATURE 
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
     # link will now point to your live university site base URL

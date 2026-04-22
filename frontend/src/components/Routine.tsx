@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 
 // 2. Building the Routine component
 const Routine: React.FC = () => {
-  // --- STATE MEMORY ---
+  //  STATE MEMORY
   // We need React state so the page actually re-renders when the data arrives!
   const [routine, setRoutine] = useState<string[]>([]);
   const [skinType, setSkinType] = useState<string>('unique');
 
-  // --- THE POLLING TRICK ---
+  //  THE POLLING TRICK
   // This forces the component to constantly check local storage for the routine
   useEffect(() => {
     const loadRoutineData = () => {

@@ -1,7 +1,7 @@
 // first, i bring in react and the hooks i need for memory and interactivity
 import React, { useState, useRef, useEffect } from 'react';
 
-// --- MY RULEBOOKS (INTERFACES) ---
+// MY RULEBOOKS (INTERFACES)
 // i built this rulebook to tell typescript exactly what the AI's JSON response will look like.
 interface AnalysisResult {
   identified_input: string;
@@ -60,7 +60,7 @@ const ProductAnalyser: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- THE MAIN SEND FUNCTION ---
+  //  THE MAIN SEND FUNCTION
   // this talks to the django backend when the user clicks send
   const handleSend = async (textToSend: string = input) => {
     // if the box is empty, don't do anything
@@ -112,7 +112,7 @@ const ProductAnalyser: React.FC = () => {
     }
   };
 
-  // --- RESTART BUTTON FUNCTION ---
+  //  RESTART BUTTON FUNCTION 
   // this wipes the session memory completely and refreshes the page to start over
   const handleRestart = () => {
     localStorage.removeItem('myskinspec_analyser');
@@ -143,7 +143,7 @@ const ProductAnalyser: React.FC = () => {
       {/* Middle Chat Feed Section */}
       <div className="flex-grow p-6 overflow-y-auto bg-slate-50/50 flex flex-col gap-6">
         
-        {/* --- THE MAGIC BUTTON --- */}
+        {/* THE MAGIC BUTTON */}
         {/* This button ONLY shows up if two conditions are met: 
             1. They actually have a routine saved in local storage.
             2. The chat only has exactly 1 message (the greeting). 

@@ -22,7 +22,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
   // a memory switch to track if the mobile dropdown menu is open or closed (starts closed/false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // --- NEW MENU DATA ---
+  // NEW MENU DATA
   // i created an array of objects to hold all my navigation links. 
   // i added an optional 'locked' property to flag my premium features!
   const navItems: { label: string; view: ViewState | 'profile'; locked?: boolean }[] = [
@@ -42,7 +42,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
     setIsMobileMenuOpen(false); 
   };
 
-  // --- THE VISUAL PART (HTML/TAILWIND) ---
+  // THE VISUAL PART (HTML/TAILWIND)
   return (
     // The master wrapper for the navigation bar.
     // 'sticky top-0 z-50' makes it freeze at the top of the screen when you scroll down.
@@ -53,7 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
         {/* a flexbox container to spread the logo to the left and the links to the right */}
         <div className="flex justify-between items-center h-20">
           
-          {/* --- THE LOGO --- */}
+          {/* THE LOGO */}
           {/* clicking the text logo always takes you back to the 'home' view */}
           <div className="flex items-center cursor-pointer" onClick={() => handleNavigation('home')}>
             <span className="font-serif text-2xl font-bold text-slate-900 tracking-tight">
@@ -61,7 +61,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
             </span>
           </div>
 
-          {/* --- DESKTOP NAVIGATION LINKS --- */}
+          {/* DESKTOP NAVIGATION LINKS*/}
           {/* 'hidden lg:flex' means this entire block hides on small phone screens, but shows as a row on laptops */}
           <div className="hidden lg:flex space-x-6">
             
@@ -80,7 +80,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
               >
                 {item.label}
                 
-                {/* --- THE PADLOCK UI --- */}
+                {/* THE PADLOCK UI */}
                 {/* If they are NOT logged in, AND the item is locked, draw a tiny padlock emoji! */}
                 {!isLoggedIn && item.locked && (
                   <span className="text-xs opacity-50" title="Sign in required">🔒</span>
@@ -89,7 +89,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
             ))}
           </div>
 
-          {/* --- DESKTOP PROFILE BUTTON --- */}
+          {/* DESKTOP PROFILE BUTTON */}
           {/* also hidden on phones! */}
           <div className="hidden lg:flex items-center gap-4">
              <button 
@@ -101,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
              </button>
           </div>
 
-          {/* --- MOBILE NAVIGATION --- */}
+          {/* MOBILE NAVIGATION */}
           {/* 'lg:hidden' means this block ONLY shows on small phone screens! */}
           <div className="lg:hidden flex items-center gap-3">
             
@@ -124,7 +124,7 @@ const Navbar: React.FC<NavbarProps> = ({ setView, currentView }) => {
         </div>
       </div>
 
-      {/* --- MOBILE DROPDOWN MENU --- */}
+      {/* MOBILE DROPDOWN MENU */}
       {/* This entire block of HTML only draws on the screen if 'isMobileMenuOpen' is true! */}
       {isMobileMenuOpen && (
         // absolute positioning makes it drop down right over the top of the page content

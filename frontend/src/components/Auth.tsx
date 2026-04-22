@@ -9,7 +9,7 @@ interface AuthProps {
 
 // this is the actual component where the login and register magic happens
 export const Auth: React.FC<AuthProps> = ({ onClose, onLoginSuccess }) => {
-  // --- SETTING UP MY MEMORY (STATE) ---
+  //  SETTING UP MY MEMORY (STATE) 
   
   // this is a switch to track if we're on the "Log In" view or the "Register" view (it starts on true/login)
   const [isLogin, setIsLogin] = useState(true);
@@ -87,7 +87,7 @@ export const Auth: React.FC<AuthProps> = ({ onClose, onLoginSuccess }) => {
     }
   };
 
-  // --- THE VISUAL PART (HTML/CSS) ---
+  // THE VISUAL PART (HTML/CSS)
   return (
     // this makes a dark, blurry background that covers the whole website when the popup is open
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

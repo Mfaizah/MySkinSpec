@@ -74,7 +74,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
     }
   }, [messages.length]);
 
-  // --- THE MAIN SEND FUNCTION ---
+  // THE MAIN SEND FUNCTION 
   // this massive function handles sending messages to django. 
   // it defaults to sending whatever is in the 'input' box, and defaults to showing the message on screen
   const handleSend = async (textToSend: string = input, isHidden: boolean = false) => {
@@ -119,7 +119,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
         // i create a blank list to hold any interactive buttons the AI gives us
         let extractedOptions: string[] = [];
 
-        // --- CATCHING SECRET TAGS & MERGING ROUTINE DATA ---
+        // CATCHING SECRET TAGS & MERGING ROUTINE DATA
         
         // i use regular expressions (Regex) to look for my secret [PROFILE_DATA: { ... }] tag in the text
         const profileRegex = /\[PROFILE_DATA:\s*(\{.*\})\s*\]/;
@@ -188,14 +188,14 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
     }
   };
 
-  // --- RESTART BUTTON ---
+  //  RESTART BUTTON 
   // this function wipes the chat memory and refreshes the page to start the chat over
   const handleRestart = () => {
     localStorage.removeItem('myskinspec_chat');
     window.location.reload(); 
   };
 
-  // --- THE VISUAL PART (HTML/TAILWIND) ---
+  //THE VISUAL PART (HTML/TAILWIND)
   return (
     // this is the massive box that holds the whole chat, styled with backdrop-blur to look like frosted glass
     <div className="max-w-3xl mx-auto my-8 bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white flex flex-col h-[700px] overflow-hidden animate-fade-in">
@@ -232,7 +232,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
             }`}>
               
               <div className="leading-relaxed whitespace-pre-wrap">
-                {/* --- MAGIC IMAGE RENDERER --- */}
+                {/*  MAGIC IMAGE RENDERER  */}
                 {/* i split the text every time it sees [IMAGE: url] */}
                 {msg.text.split(/\[IMAGE:\s*(.*?)\]/).map((part, index) => {
                   // because of how split works, every ODD index will be the URL inside the brackets

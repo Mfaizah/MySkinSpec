@@ -29,7 +29,7 @@ const App: React.FC = () => {
   // memory spot to hold the user's name if they are logged in (we check local storage right away to see if they visited before)
   const [userName, setUserName] = useState<string | null>(localStorage.getItem('user_name'));
 
-  // --- MY CUSTOM ROUTER & GATEKEEPER ---
+  //  MY CUSTOM ROUTER & GATEKEEPER
   // this function runs whenever someone clicks a link to change the page
   const handleViewChange = (newView: ViewState | 'profile') => {
     // first, we check if they are logged in by looking for their saved name
@@ -49,7 +49,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- DATABASE SYNC ON LOGIN / REFRESH ---
+  // DATABASE SYNC ON LOGIN / REFRESH 
   // this block of code runs silently in the background whenever the 'userName' variable changes (like when they log in)
   useEffect(() => {
     if (userName) {
@@ -61,6 +61,7 @@ const App: React.FC = () => {
         // so Django doesn't accidentally overwrite our new data with a blank profile!
         const localData = localStorage.getItem('myskinspec_profile');
         if (localData) {
+           // converting the saved text string back into a usable JavaScript object.
            const parsed = JSON.parse(localData);
            // if the local profile actually has real data (not just 'Unknown')...
            if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
@@ -94,7 +95,7 @@ const App: React.FC = () => {
     }
   }, [userName]); 
 
-  // --- THE POLLING TRICK ---
+  //  THE POLLING 
   // this forces the app to constantly check local storage every 2 seconds to see if the profile updated
   // (like if the chatbot just finished generating a new routine)
   useEffect(() => {
@@ -108,7 +109,7 @@ const App: React.FC = () => {
     return () => clearInterval(interval); // clean up the loop if the component gets destroyed so it doesn't leak memory
   }, []); 
 
-  // --- MANUAL PROFILE EDITS ---
+  // MANUAL PROFILE EDITS 
   // this function runs when the user changes a dropdown menu on their profile page
   const handleProfileUpdate = (key: string, value: any) => {
     if (!userProfile) return; 
@@ -130,7 +131,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- RESET PROFILE LOGIC ---
+  // RESET PROFILE LOGIC 
   // this runs when they click the red "Reset Profile" button
   const handleResetProfile = async () => {
     // create a totally blank profile object
@@ -144,7 +145,7 @@ const App: React.FC = () => {
       recommended_routine: [] 
     };
 
-    // wipe out the chatbot and analyser memory from the browser
+    // wipe out the chatbot and analyser memory from the browser so the next quiz is totally fresh
     localStorage.removeItem('myskinspec_chat');
     localStorage.removeItem('myskinspec_analyser');
 
@@ -192,7 +193,7 @@ const App: React.FC = () => {
     setCurrentView('home');
   };
 
-  // --- THE VISUAL PART (JSX RENDER) ---
+  // THE VISUAL PART (JSX RENDER)
   return (
     // the master wrapper for the entire app with our beautiful pastel gradient background
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-yellow-50 font-sans text-slate-800 flex flex-col">
@@ -204,6 +205,7 @@ const App: React.FC = () => {
       <main className="flex-grow">
         
         {/* CONDITIONAL RENDERING: we only draw the component that matches our 'currentView' memory! */}
+        {/* swapping out the visible page instantly based on which navigation button they clicked without reloading the browser */}
         {currentView === 'home' && <Main onStartChat={() => handleViewChange('quiz')} onLearnMore={() => handleViewChange('analyse')} />}
         {currentView === 'quiz' && <SkinQuiz onComplete={() => handleViewChange('chat')} />}
         {currentView === 'chat' && <ChatBot onNavigateToAnalyser={() => handleViewChange('analyse')} />}
@@ -370,11 +372,12 @@ const App: React.FC = () => {
 };
 
 
-// --- THE CUSTOM LOGIN FORM COMPONENT ---
+// THE CUSTOM LOGIN FORM COMPONENT
 // i built this mini-component right here so i could reuse the login logic easily
 const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }) => {
   // state to track if we are looking at the "register" screen or the "login" screen
   const [isRegistering, setIsRegistering] = useState(false);
+  // setting up standard memory spots for the user's typing in the login form fields.
   const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -394,6 +397,7 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }) 
       });
+      // converting the raw server response into a format JavaScript can read.
       const data = await res.json();
       
       // if django says 200 OK...

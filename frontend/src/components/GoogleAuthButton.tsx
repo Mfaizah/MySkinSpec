@@ -14,7 +14,7 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccessLogin }) =
   // i set up a small memory space just in case the login fails and i need to show a red error message
   const [error, setError] = useState('');
 
-  // --- THE SUCCESS FUNCTION ---
+  // THE SUCCESS FUNCTION
   // this runs automatically the exact second the user clicks their google account and google says "approved"
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
@@ -45,13 +45,13 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ onSuccessLogin }) =
         setError('Failed to authenticate with our servers.');
       }
     } catch (err) {
-      // --- THE UPDATED CATCH BLOCK ---
+      // HE UPDATED CATCH BLOCK
       // Clean, professional error message!
       setError('Network error. Please check your connection.');
     }
   };
 
-  // --- THE VISUAL PART ---
+  //  THE VISUAL PART
   return (
     // a simple flexbox column to stack the button and the error message on top of each other
     <div className="flex flex-col items-center gap-2">
