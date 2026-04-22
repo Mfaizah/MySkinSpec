@@ -98,16 +98,22 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
 
     // now i try to talk to the django backend
     try {
-      // i grab the security token so Django lets me through the @permission_classes guard
+      // i grab the security token from memory
       const token = localStorage.getItem('access_token');
 
-      // i make a POST request to my django chat API WITH the token!
+      // i build the headers dynamically. i ONLY attach the VIP security badge if they actually have a token!
+      // this stops Django from crashing if it sees a "Bearer null" token.
+      const requestHeaders: any = { 
+        'Content-Type': 'application/json' 
+      };
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      // i make a POST request to my django chat API using our safe headers!
       const res = await fetch('https://myskinspec.onrender.com/api/chat/', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
+        headers: requestHeaders,
         // i send the ENTIRE chat history to django so the AI remembers what we were talking about
         body: JSON.stringify({ history: newHistory }) 
       });
@@ -125,20 +131,21 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
         // i create a blank list to hold any interactive buttons the AI gives us
         let extractedOptions: string[] = [];
 
-        // CATCHING SECRET TAGS & MERGING ROUTINE DATA
-        
-        // i use regular expressions (Regex) to look for my secret [PROFILE_DATA: { ... }] tag in the text
-        // i use [\s\S]*? to safely catch the data even if the AI formats it across multiple lines
-        const profileRegex = /\[PROFILE_DATA:\s*([\s\S]*?)\s*\]/;
-        const profileMatch = aiText.match(profileRegex);
-        
-        // if i found profile data (which means the AI just built a routine)...
-        if (profileMatch) {
+        // --- THE BULLETPROOF DATA EXTRACTOR ---
+        if (aiText.includes('[PROFILE_DATA:')) {
           try {
-            // i clean the string to remove any invisible markdown formatting the AI might have accidentally included
-            const cleanJsonString = profileMatch[1].replace(/```json/gi, '').replace(/```/g, '').trim();
+            // Find exactly where the secret tag starts
+            const tagStart = aiText.indexOf('[PROFILE_DATA:');
+            const profileSection = aiText.substring(tagStart);
             
-            // i unpack the clean string into a real JSON object
+            // Find the very first '{' and the very last '}' so we perfectly extract the JSON ignoring weird array brackets!
+            const jsonStart = profileSection.indexOf('{');
+            const jsonEnd = profileSection.lastIndexOf('}');
+            
+            // Slice out perfectly clean JSON
+            const cleanJsonString = profileSection.substring(jsonStart, jsonEnd + 1);
+            
+            // Unpack it into a real object
             const newRoutineData = JSON.parse(cleanJsonString);
             
             // i grab the OLD survey data we already have saved in local storage
@@ -159,8 +166,12 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
                 body: JSON.stringify(mergedProfile),
               });
             }
-            // finally, i delete the ugly secret tag from the text string so the user never sees it
-            aiText = aiText.replace(profileRegex, '').trim();
+            
+            // Carefully remove ONLY the secret tag from the chat text without accidentally deleting the interactive buttons!
+            const tagEndBracket = profileSection.indexOf(']', jsonEnd);
+            const fullTagToRemove = profileSection.substring(0, tagEndBracket + 1);
+            aiText = aiText.replace(fullTagToRemove, '').trim();
+            
           } catch (e) {
             // if the JSON parsing crashes, i catch the error quietly so the app doesn't break
             console.error("Silent JSON crash prevented!", e);
@@ -318,8 +329,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
 };
 
 export default ChatBot;
-
-
 
 //https://react.dev/learn/manipulating-the-dom-with-refs
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions

@@ -17,7 +17,7 @@ import { ViewState, SurveyResult } from './types';
 const App: React.FC = () => {
   //  STATE SETUP (THE APP'S MEMORY) 
   
-  // FIX #1: We tell React to look in the browser's temporary sessionStorage to remember what page we were on before the refresh!
+  // We tell React to look in the browser's temporary sessionStorage to remember what page we were on before the refresh!
   // if there's nothing saved, we default to the 'home' page.
   const [currentView, setCurrentView] = useState<ViewState | 'profile'>(() => {
     return (sessionStorage.getItem('current_view') as ViewState | 'profile') || 'home';
@@ -59,43 +59,50 @@ const App: React.FC = () => {
         
         // We wrap the sync process in an async function so we can use "await" to prevent Race Conditions!
         const syncDatabase = async () => {
-          // FIX #2: If we have a local profile saved in the browser, push it up to our live Django database FIRST 
-          // so Django doesn't accidentally overwrite our new data with a blank profile!
           const localData = localStorage.getItem('myskinspec_profile');
+          let hasGoodLocalData = false;
+          let localParsed = null;
+
+          // STEP 1: Check if the browser already has the data saved perfectly!
           if (localData) {
-             // converting the saved text string back into a usable JavaScript object.
-             const parsed = JSON.parse(localData);
-             // if the local profile actually has real data (not just 'Unknown')...
-             if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
+             localParsed = JSON.parse(localData);
+             // Does it actually have real data (not just blank strings or "Unknown")?
+             if (localParsed.skin_type && localParsed.skin_type !== 'Unknown' && localParsed.skin_type !== '') {
+                 hasGoodLocalData = true; // Flip the safety switch!
+                 
+                 // Force Django to accept our local data so the backend stays identical to our screen!
                  try {
-                   // send it to the live Render backend! (Notice the 'await' here)
                    await fetch('https://myskinspec.onrender.com/api/profile/', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                      body: JSON.stringify(parsed)
+                      body: JSON.stringify(localParsed)
                    });
-                 } catch(e) { console.log("Upward sync failed"); } // if it fails, just print an error quietly
+                 } catch(e) { console.log("Upward sync failed"); } 
              }
           }
 
-          // Then, pull the authoritative version down from the live Django database to make sure we are fully synced
-          // We wait for the push to finish first before doing this!
-          try {
-            const res = await fetch('https://myskinspec.onrender.com/api/profile/', {
-              method: 'GET',
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json(); // unpack the JSON response
-            
-            // if django sent us real data back...
-            if (data && !data.error && Object.keys(data).length > 0) {
-              // ONLY overwrite our local storage if Django actually has a real profile saved (not a blank one)
-              if (data.skin_type !== 'Unknown' || (data.recommended_routine && data.recommended_routine.length > 0)) {
-                setUserProfile(data); // update the react memory
-                localStorage.setItem('myskinspec_profile', JSON.stringify(data)); // save it to the browser memory
+          // STEP 2: ONLY download from Django if our local browser is totally empty!
+          // This entirely stops Django from accidentally wiping out our screen on refresh!
+          if (!hasGoodLocalData) {
+            try {
+              const res = await fetch('https://myskinspec.onrender.com/api/profile/', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const data = await res.json(); 
+              
+              if (data && !data.error && Object.keys(data).length > 0) {
+                // only save it if Django actually sent real data
+                if (data.skin_type && data.skin_type !== 'Unknown' && data.skin_type !== '') {
+                  setUserProfile(data); 
+                  localStorage.setItem('myskinspec_profile', JSON.stringify(data)); 
+                }
               }
-            }
-          } catch(err) { console.log("Silent background sync failed."); } // catch any network errors silently
+            } catch(err) { console.log("Silent background sync failed."); } 
+          } else {
+            // If we already had good local data, just load it straight into React memory!
+            setUserProfile(localParsed);
+          }
         };
 
         // Run the async function!
@@ -194,8 +201,6 @@ const App: React.FC = () => {
     localStorage.removeItem('myskinspec_profile'); 
     sessionStorage.removeItem('current_view'); // wipe the saved view so it goes back to home
     
-    // (Note: Deliberately keeping the chat memory intact here so they don't lose their conversation if they log out!)
-    
     // reset the react memory to null/home
     setUserProfile(null);
     setUserName(null);
@@ -285,7 +290,7 @@ const App: React.FC = () => {
                 </div>
 
                 {/* if their profile is basically blank, show a big prompt to take the quiz */}
-                {(!userProfile || userProfile.skin_type === 'Unknown') ? (
+                {(!userProfile || userProfile.skin_type === 'Unknown' || userProfile.skin_type === '') ? (
                   <div className="text-center py-16 bg-gradient-to-b from-blue-50 to-white rounded-3xl border border-blue-100">
                     <div className="text-4xl mb-4">🤔</div>
                     <p className="text-slate-500 mb-6 text-lg">You haven't built your profile yet!</p>
@@ -400,7 +405,7 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
     const endpoint = isRegistering ? 'register/' : 'login/';
     
     try {
-      // make the API call to our LIVE backend (Fix: removed the extra .com)
+      // make the API call to our LIVE backend
       const res = await fetch(`https://myskinspec.onrender.com/api/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

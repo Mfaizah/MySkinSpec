@@ -141,6 +141,12 @@ CORS_ALLOWED_ORIGINS = [
     "https://w1985499.users.ecs.westminster.ac.uk",
 ]
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
+}
 # --- EMAIL SETUP ---
 # CHANGED: Telling Django to actually send real emails over the internet using SMTP instead of just printing them to my server console.
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
