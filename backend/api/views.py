@@ -154,6 +154,7 @@ class GeminiChatView(APIView):
         - Search Optimization: Pass simple, brand-specific search terms into the tool to ensure you get a hit. 
         - Good tool search: "COSRX snail", "Cerave foaming cleanser", "Beauty of Joseon sunscreen".
         - Bad tool search: "Gentle cleanser for oily sensitive skin".
+        - K-BEAUTY RULE: If the user asks for "Korean" or "K-Beauty" products, DO NOT search for the word "Korean". You MUST search using specific Korean brand names (e.g., "COSRX", "Beauty of Joseon", "Purito", "Klairs", "Isntree", "Etude House", "Anua").
 
         5. THE CHAT FLOW & FORMATTING:
         Step 1: Greet them, acknowledge their profile, and ask: "I've reviewed your profile! Are you ready to create your personalised routine?" -> append: [OPTIONS: Yes please!, Not right now]
@@ -198,6 +199,7 @@ class GeminiChatView(APIView):
         - Search Optimization: Pass simple, brand-specific search terms into the tool to ensure you get a hit. 
         - Good tool search: "COSRX snail", "Cerave foaming cleanser", "Beauty of Joseon sunscreen".
         - Bad tool search: "Gentle cleanser for oily sensitive skin".
+        - K-BEAUTY RULE: If the user asks for "Korean" or "K-Beauty" products, DO NOT search for the word "Korean". You MUST search using specific Korean brand names (e.g., "COSRX", "Beauty of Joseon", "Purito", "Klairs", "Isntree", "Etude House", "Anua").
 
         5. THE CHAT FLOW & FORMATTING:
         Step 1: Greet them, acknowledge their profile, and ask: "I've reviewed your profile! Are you ready to create your personalised routine?" -> append: [OPTIONS: Yes please!, Not right now]
