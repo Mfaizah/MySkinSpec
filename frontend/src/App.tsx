@@ -35,8 +35,8 @@ const App: React.FC = () => {
     // first, we check if they are logged in by looking for their saved name
     const isLoggedIn = !!localStorage.getItem('user_name');
     
-    // SECURITY CHECK: if they try to access the routine or analyser but ARE NOT logged in...
-    if ((newView === 'routine' || newView === 'analyse') && !isLoggedIn) {
+    // SECURITY CHECK: if they try to access the chat, routine or analyser but ARE NOT logged in...
+    if ((newView === 'routine' || newView === 'analyse' || newView === 'chat') && !isLoggedIn) {
       // throw an alert popup telling them to sign in
       alert('🔒 Please sign in or create a free account to save your routine and unlock the Analyser!');
       // force them over to the profile/login page instead
@@ -57,40 +57,49 @@ const App: React.FC = () => {
       const token = localStorage.getItem('access_token');
       if (token) {
         
-        // FIX #2: If we have a local profile saved in the browser, push it up to our live Django database FIRST 
-        // so Django doesn't accidentally overwrite our new data with a blank profile!
-        const localData = localStorage.getItem('myskinspec_profile');
-        if (localData) {
-           // converting the saved text string back into a usable JavaScript object.
-           const parsed = JSON.parse(localData);
-           // if the local profile actually has real data (not just 'Unknown')...
-           if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
-               // send it to the live Render backend!
-               fetch('https://myskinspec.onrender.com/api/profile/', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify(parsed)
-               }).catch(e => console.log("Upward sync failed")); // if it fails, just print an error quietly
-           }
-        }
-
-        // Then, pull the authoritative version down from the live Django database to make sure we are fully synced
-        fetch('https://myskinspec.onrender.com/api/profile/', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json()) // unpack the JSON response
-        .then(data => {
-          // if django sent us real data back...
-          if (data && !data.error && Object.keys(data).length > 0) {
-            // ONLY overwrite our local storage if Django actually has a real profile saved (not a blank one)
-            if (data.skin_type !== 'Unknown' || (data.recommended_routine && data.recommended_routine.length > 0)) {
-              setUserProfile(data); // update the react memory
-              localStorage.setItem('myskinspec_profile', JSON.stringify(data)); // save it to the browser memory
-            }
+        // We wrap the sync process in an async function so we can use "await" to prevent Race Conditions!
+        const syncDatabase = async () => {
+          // FIX #2: If we have a local profile saved in the browser, push it up to our live Django database FIRST 
+          // so Django doesn't accidentally overwrite our new data with a blank profile!
+          const localData = localStorage.getItem('myskinspec_profile');
+          if (localData) {
+             // converting the saved text string back into a usable JavaScript object.
+             const parsed = JSON.parse(localData);
+             // if the local profile actually has real data (not just 'Unknown')...
+             if (parsed.skin_type && parsed.skin_type !== 'Unknown') {
+                 try {
+                   // send it to the live Render backend! (Notice the 'await' here)
+                   await fetch('https://myskinspec.onrender.com/api/profile/', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                      body: JSON.stringify(parsed)
+                   });
+                 } catch(e) { console.log("Upward sync failed"); } // if it fails, just print an error quietly
+             }
           }
-        })
-        .catch(err => console.log("Silent background sync failed.")); // catch any network errors silently
+
+          // Then, pull the authoritative version down from the live Django database to make sure we are fully synced
+          // We wait for the push to finish first before doing this!
+          try {
+            const res = await fetch('https://myskinspec.onrender.com/api/profile/', {
+              method: 'GET',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json(); // unpack the JSON response
+            
+            // if django sent us real data back...
+            if (data && !data.error && Object.keys(data).length > 0) {
+              // ONLY overwrite our local storage if Django actually has a real profile saved (not a blank one)
+              if (data.skin_type !== 'Unknown' || (data.recommended_routine && data.recommended_routine.length > 0)) {
+                setUserProfile(data); // update the react memory
+                localStorage.setItem('myskinspec_profile', JSON.stringify(data)); // save it to the browser memory
+              }
+            }
+          } catch(err) { console.log("Silent background sync failed."); } // catch any network errors silently
+        };
+
+        // Run the async function!
+        syncDatabase();
       }
     }
   }, [userName]); 
@@ -391,8 +400,8 @@ const AuthForm = ({ onSuccessLogin }: { onSuccessLogin: (name: string) => void }
     const endpoint = isRegistering ? 'register/' : 'login/';
     
     try {
-      // make the API call to our LIVE backend
-      const res = await fetch(`https://myskinspec.onrender.com.com/api/${endpoint}`, {
+      // make the API call to our LIVE backend (Fix: removed the extra .com)
+      const res = await fetch(`https://myskinspec.onrender.com/api/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }) 

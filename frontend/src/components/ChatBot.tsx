@@ -98,10 +98,16 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
 
     // now i try to talk to the django backend
     try {
-      // i make a POST request to my django chat API
+      // i grab the security token so Django lets me through the @permission_classes guard
+      const token = localStorage.getItem('access_token');
+
+      // i make a POST request to my django chat API WITH the token!
       const res = await fetch('https://myskinspec.onrender.com/api/chat/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
         // i send the ENTIRE chat history to django so the AI remembers what we were talking about
         body: JSON.stringify({ history: newHistory }) 
       });
@@ -122,14 +128,19 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
         // CATCHING SECRET TAGS & MERGING ROUTINE DATA
         
         // i use regular expressions (Regex) to look for my secret [PROFILE_DATA: { ... }] tag in the text
-        const profileRegex = /\[PROFILE_DATA:\s*(\{.*\})\s*\]/;
+        // i use [\s\S]*? to safely catch the data even if the AI formats it across multiple lines
+        const profileRegex = /\[PROFILE_DATA:\s*([\s\S]*?)\s*\]/;
         const profileMatch = aiText.match(profileRegex);
         
         // if i found profile data (which means the AI just built a routine)...
         if (profileMatch) {
           try {
-            // i unpack the string into a real JSON object
-            const newRoutineData = JSON.parse(profileMatch[1]);
+            // i clean the string to remove any invisible markdown formatting the AI might have accidentally included
+            const cleanJsonString = profileMatch[1].replace(/```json/gi, '').replace(/```/g, '').trim();
+            
+            // i unpack the clean string into a real JSON object
+            const newRoutineData = JSON.parse(cleanJsonString);
+            
             // i grab the OLD survey data we already have saved in local storage
             const oldProfile = JSON.parse(localStorage.getItem('myskinspec_profile') || '{}');
             
@@ -140,10 +151,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
             localStorage.setItem('myskinspec_profile', JSON.stringify(mergedProfile));
             
             // i check if they are logged in by looking for their security token
-            const token = localStorage.getItem('access_token');
             if (token) {
-              // if they are logged in, i send the newly merged profile to Django so it saves in the database permanently!
-              fetch('https://myskinspec.onrender.com/api/profile/', {
+              // if they are logged in, i send the newly merged profile to Django and wait for it to save permanently in the database!
+              await fetch('https://myskinspec.onrender.com/api/profile/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(mergedProfile),
@@ -151,7 +161,10 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
             }
             // finally, i delete the ugly secret tag from the text string so the user never sees it
             aiText = aiText.replace(profileRegex, '').trim();
-          } catch (e) {} // if the JSON parsing crashes, i just ignore it so the app doesn't break
+          } catch (e) {
+            // if the JSON parsing crashes, i catch the error quietly so the app doesn't break
+            console.error("Silent JSON crash prevented!", e);
+          } 
         }
 
         // i look for the secret [NAVIGATE_ANALYSER] tag
@@ -181,7 +194,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
         setMessages(prev => [...prev, { role: 'model', text: 'Error connecting to the server. ' + (data.error || '') }]);
       }
     } catch (err) {
-      // --- THE UPDATED CATCH BLOCK ---
       // No more "Is Django running?". We use a clean, professional error message!
       setIsLoading(false);
       setMessages(prev => [...prev, { role: 'model', text: 'Network error. Please check your connection.' }]);
@@ -232,7 +244,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
             }`}>
               
               <div className="leading-relaxed whitespace-pre-wrap">
-                {/*  MAGIC IMAGE RENDERER  */}
+                {/* MAGIC IMAGE RENDERER  */}
                 {/* i split the text every time it sees [IMAGE: url] */}
                 {msg.text.split(/\[IMAGE:\s*(.*?)\]/).map((part, index) => {
                   // because of how split works, every ODD index will be the URL inside the brackets
@@ -308,9 +320,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ onNavigateToAnalyser }) => {
 export default ChatBot;
 
 
-//https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
+
 //https://react.dev/learn/manipulating-the-dom-with-refs
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
 //https://tailwindcss.com/docs/animation
-
