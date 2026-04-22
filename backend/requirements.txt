@@ -1,17 +1,19 @@
 # --- CORE DJANGO & DATABASE ---
+asgiref==3.11.1 // Standard helper for Django's internal web server.
 Django==6.0.3 // The main web framework.
-dj-database-url // Connects to Render's live Postgres database.
-psycopg2-binary // The engine that talks to PostgreSQL.
-django-cors-headers==4.9.0 // Allows React to talk to this backend.
+dj-database-url==3.1.2 // Automatically connects to Render's live Postgres database.
+psycopg2-binary==2.9.12 // The engine that allows Python to talk to PostgreSQL.
+django-cors-headers==4.9.0 // Allows your React frontend to talk to this backend.
 python-dotenv==1.2.2 // Loads your secret API keys from the .env file.
 
 # --- AUTHENTICATION & API ---
-djangorestframework==3.16.1 // Tools for building the API.
-djangorestframework_simplejwt==5.5.1 // handles secure login tokens.
+djangorestframework==3.16.1 // Tools for building the API endpoints.
+djangorestframework_simplejwt==5.5.1 // Handles the secure login tokens.
 django-rest-passwordreset==1.5.0 // The library for the email password reset feature.
+PyJWT==2.12.1 // Security tool for verifying login tokens.
 
-# --- GOOGLE AI & NETWORKING (Version-Free to Fix Conflicts) ---
-# We remove version numbers here so pip can solve the Python 3.14 conflict automatically.
+# --- GOOGLE AI & NETWORKING (VERSION-FREE TO FIX CONFLICTS) ---
+# We remove the "==VERSION" for these because they must be flexible to work on Python 3.14
 google-generativeai
 google-auth
 google-api-python-client
@@ -21,4 +23,9 @@ googleapis-common-protos
 grpcio
 grpcio-status
 protobuf
-requests==2.32.5
+
+# --- UTILITIES & SYSTEM ---
+requests==2.32.5 // Tool for making searches to the Open Beauty Facts API.
+sqlparse==0.5.5 // Helps Django format database queries.
+pydantic==2.12.5 // Data validation tool used by the AI libraries.
+tzdata==2025.3 // Ensures your database timestamps use the correct world clock.
