@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+
 from pathlib import Path
+import os # pulling in the OS tool so we can securely read secret passwords from our .env file!
+import dj_database_url # pulling in the database URL tool so Render can automatically connect our live Postgres database!
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,11 +83,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# CHANGED: Telling Django to look for Render's live Postgres database URL, but if it can't find one (like when I'm coding locally), default back to the standard SQLite file!
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
+    )
 }
 
 
@@ -136,4 +140,17 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://w1985499.users.ecs.westminster.ac.uk",
 ]
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# --- EMAIL SETUP ---
+# CHANGED: Telling Django to actually send real emails over the internet using SMTP instead of just printing them to my server console.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# telling it to use google's standard email servers.
+EMAIL_HOST = 'smtp.gmail.com'
+# opening the specific network port required for secure email transmission.
+EMAIL_PORT = 587
+# turning on transport layer security so the password reset emails are encrypted and safe from hackers.
+EMAIL_USE_TLS = True
+# grabbing the sender email address from my hidden .env variables so I don't leak it on GitHub.
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# grabbing the special Gmail App Password from my hidden .env variables so I can log in and send the email.
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
