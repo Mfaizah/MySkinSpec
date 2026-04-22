@@ -1,38 +1,24 @@
 # --- CORE DJANGO & DATABASE ---
 Django==6.0.3 // The main web framework.
-dj-database-url // Automatically connects to Render's Postgres database.
-psycopg2-binary // The engine that allows Python to talk to PostgreSQL.
-django-cors-headers==4.9.0 // Allows your React frontend to talk to this backend.
+dj-database-url // Connects to Render's live Postgres database.
+psycopg2-binary // The engine that talks to PostgreSQL.
+django-cors-headers==4.9.0 // Allows React to talk to this backend.
 python-dotenv==1.2.2 // Loads your secret API keys from the .env file.
 
 # --- AUTHENTICATION & API ---
-djangorestframework==3.16.1 // Tools for building the API endpoints.
-djangorestframework_simplejwt==5.5.1 // Handles the secure login tokens.
+djangorestframework==3.16.1 // Tools for building the API.
+djangorestframework_simplejwt==5.5.1 // handles secure login tokens.
 django-rest-passwordreset==1.5.0 // The library for the email password reset feature.
-PyJWT==2.12.1 // Security tool for verifying login tokens.
-cryptography==46.0.5 // Encryption tool for secure data handling.
 
-# --- GOOGLE AI & API (Loosened to fix conflicts) ---
-# I removed the version numbers here so Render can resolve the Python 3.14 conflicts automatically.
-google-generativeai // The library for the Gemini AI chatbot.
-google-auth // Handles Google SSO login verification.
-google-api-python-client // General tool for interacting with Google services.
-google-api-core // Core logic for Google's API libraries.
-google-ai-generativelanguage // Specific definitions for the AI model.
-googleapis-common-protos // Standard data formats for Google APIs.
-
-# --- NETWORKING & SYSTEM (Loosened to fix conflicts) ---
-# These must be flexible so they don't fight with the Google libraries above.
-grpcio 
-grpcio-status 
-protobuf 
-requests==2.32.5 // Tool for making searches to the Open Beauty Facts API.
-urllib3==2.6.3 // Underlying tool for web requests.
-certifi==2026.2.25 // Security certificates for safe web connections.
-
-# --- UTILITIES ---
-pydantic==2.12.5 // Data validation tool used by the AI libraries.
-sqlparse==0.5.5 // Helps Django format database queries.
-asgiref==3.11.1 // Standard helper for Django's internal web server.
-tzdata==2025.3 // Ensures your database timestamps use the correct world clock.
-tqdm==4.67.3 // Progress bars for background tasks.
+# --- GOOGLE AI & NETWORKING (Version-Free to Fix Conflicts) ---
+# We remove version numbers here so pip can solve the Python 3.14 conflict automatically.
+google-generativeai
+google-auth
+google-api-python-client
+google-api-core
+google-ai-generativelanguage
+googleapis-common-protos
+grpcio
+grpcio-status
+protobuf
+requests==2.32.5
